@@ -1,0 +1,9 @@
+html, body {
+  margin: 0;
+  height: 100%;
+}
+app-root {
+  margin: 0;
+  display: block;
+  height: 100%;
+}
