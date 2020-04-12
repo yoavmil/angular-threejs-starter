@@ -1,0 +1,16 @@
+{
+  "name": "nav-cube",
+  "version": "0.0.1",
+  "description": "navigation cube for ThreeJS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "navigation",
+    "cube",
+    "threejs"
+  ],
+  "author": "yoavmil@gmail.com",
+  "license": "LGPL-3.0-or-later"
+}
