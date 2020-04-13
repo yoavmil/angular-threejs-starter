@@ -1,6 +1,7 @@
 import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { NavCubeParams, NavCube } from '../nav-cube/nav-cube';
 
 @Component({
   selector: 'app-viewer',
@@ -10,6 +11,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 export class ViewerComponent implements AfterViewInit {
   @ViewChild('viewerWrapper', { static: false })
   viewerWrapperRef: ElementRef;
+
+  @ViewChild('navCube', { static: false })
+  navCubeDivRef: ElementRef;
+
   private get canvas(): HTMLDivElement {
     return this.viewerWrapperRef.nativeElement as HTMLDivElement;
   }
@@ -30,8 +35,19 @@ export class ViewerComponent implements AfterViewInit {
     this.createScene();
     this.createCamera();
     this.createStubCube();
+    this.initNavCube();
 
     this.render();
+  }
+
+  initNavCube() {
+    let navCubeParams : NavCubeParams = {
+      camera: this.camera,
+      div: this.navCubeDivRef.nativeElement,
+      champer : 0.1,
+      homePosition : new THREE.Vector3(-1,-1,1)
+    };
+    new NavCube(navCubeParams);
   }
 
   createStubCube() {

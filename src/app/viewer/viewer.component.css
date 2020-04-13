@@ -1,5 +1,15 @@
-div {
+.viewer {
   margin: 0;
   display: block;
   height: 100%;
+}
+
+.nav-cube {
+  position: fixed;
+  width: 10rem;
+  height: 10rem;
+  z-index: 2;
+  right: 1rem;
+  bottom: 1rem;
+  color: aliceblue;
 }
