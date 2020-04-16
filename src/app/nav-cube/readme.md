@@ -31,3 +31,7 @@ The cube is constructed of
 * the main surface faces (front, left, top ...), 
 * edge faces (front-left, front-top ...)
 * corner faces (front-left-top ...)
+
+### TODO
+* add text to sides
+* call back to rotate user camera

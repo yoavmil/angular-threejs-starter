@@ -26,7 +26,8 @@ export class ViewerComponent implements AfterViewInit {
   cameraControls: any;
   scene: THREE.Scene;
   ambientLight: THREE.AmbientLight;
-  light: THREE.DirectionalLight;
+  directionLight1: THREE.DirectionalLight;
+  directionLight2: THREE.DirectionalLight;
 
   constructor() {}
 
@@ -34,28 +35,36 @@ export class ViewerComponent implements AfterViewInit {
     this.createRenderer();
     this.createScene();
     this.createCamera();
-    this.createStubCube();
+    this.createStubObjects();
     this.initNavCube();
 
     this.render();
   }
 
   initNavCube() {
-    let navCubeParams : NavCubeParams = {
+    let navCubeParams: NavCubeParams = {
       camera: this.camera,
       div: this.navCubeDivRef.nativeElement,
-      champer : 0.1,
-      homePosition : new THREE.Vector3(-1,-1,1)
+      champer: 0.15,
+      homePosition: new THREE.Vector3(-1, -1, 1),
     };
     new NavCube(navCubeParams);
   }
 
-  createStubCube() {
-    var geometry = new THREE.BoxBufferGeometry(1, 1, 2);
+  createStubObjects() {
+    var geometry = new THREE.BoxBufferGeometry(1, 2, 3);
     var material = new THREE.MeshStandardMaterial({ color: 0x123456 });
 
     let mesh = new THREE.Mesh(geometry, material);
+
     this.scene.add(mesh);
+
+    let dir = new THREE.Vector3(1, 0, 0);
+    let origin = new THREE.Vector3(0, 0, 0);
+    let length: number = 4;
+    let arroColor = 0x132435;
+    var arrowHelper = new THREE.ArrowHelper(dir, origin, length, arroColor);
+    this.scene.add(arrowHelper);
   }
 
   createRenderer() {
@@ -73,7 +82,7 @@ export class ViewerComponent implements AfterViewInit {
     let ratio = this.canvas.clientWidth / this.canvas.clientHeight;
     this.camera = new THREE.PerspectiveCamera(45, ratio, 1, 800);
     this.camera.position.set(-5, 5, 5);
-
+    this.camera.up.copy(new THREE.Vector3(0, 0, 1));
     this.cameraControls = new OrbitControls(
       this.camera,
       this.renderer.domElement
@@ -84,10 +93,14 @@ export class ViewerComponent implements AfterViewInit {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xaaaaaa);
     this.ambientLight = new THREE.AmbientLight(0x333333); // 0.2
+    this.directionLight1 = new THREE.DirectionalLight(0xffffff, 0.5);
+    this.directionLight1.position.set(10, 10, 20);
+    this.directionLight2 = new THREE.DirectionalLight(0xffffff, 0.1);
+    this.directionLight2.position.set(-10, 10, 10);
 
-    this.light = new THREE.DirectionalLight(0xffffff, 1.0);
     this.scene.add(this.ambientLight);
-    this.scene.add(this.light);
+    this.scene.add(this.directionLight1);
+    this.scene.add(this.directionLight2);
   }
 
   render() {

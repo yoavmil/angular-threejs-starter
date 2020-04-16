@@ -1,6 +1,5 @@
-import { isArray } from 'util';
-import { Vector3, Camera, Color } from 'three';
 import * as THREE from 'three';
+import { Vector3 } from 'three';
 
 class NavCubeParams {
   camera: THREE.Camera;
@@ -27,8 +26,7 @@ class NavCube {
   localCamera: THREE.PerspectiveCamera;
   cubeMesh: THREE.Mesh;
   scene: THREE.Scene;
-  ambientLight: THREE.AmbientLight;
-  directionLight: THREE.DirectionalLight;
+  radius: number = 2 * Math.sqrt(2);
 
   constructor(params: NavCubeParams) {
     this.params = params;
@@ -55,7 +53,7 @@ class NavCube {
     this.renderer.setSize(canvasWidth, canvasHeight);
     this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.params.div.appendChild(this.renderer.domElement);
-    this.renderer.setClearColor(0x123456, 0.12);
+    this.renderer.setClearColor(0, 0); // transparent background
   }
 
   createScene() {
@@ -66,83 +64,242 @@ class NavCube {
 
     this.scene = new THREE.Scene();
     this.scene.add(this.cubeMesh);
-
-    this.ambientLight = new THREE.AmbientLight(0x333333);
-    this.directionLight = new THREE.DirectionalLight(0xffffff, 1.0);
-
-    this.scene.add(this.ambientLight);
-    this.scene.add(this.directionLight);
   }
 
   createMainFacets() {
     // it's math: the projection of the champer on the plane is champer / sqrt(2)
     // (Pythagoras), reduce from both side and you get:
     let width = 1.0 - Math.sqrt(2) * this.params.champer;
-    let plane = new THREE.PlaneGeometry(width, width);
+    let plane = new THREE.PlaneGeometry(width, width).translate(0, 0, 0.5);
     let mat = new THREE.MeshBasicMaterial({});
     let halfPi = Math.PI / 2;
     let geometries = [];
 
-    geometries[Sides.Front] = plane
-      .clone()
-      .rotateX(halfPi)
-      .translate(0, 0.5, 0);
-    geometries[Sides.Back] = plane
-      .clone()
-      .rotateX(-halfPi)
-      .translate(0, -0.5, 0);
-    geometries[Sides.Left] = plane
-      .clone()
-      .rotateY(halfPi)
-      .translate(-0.5, 0, 0);
-    geometries[Sides.Right] = plane
-      .clone()
-      .rotateY(-halfPi)
-      .translate(0.5, 0, 0);
-    geometries[Sides.Top] = plane.clone().translate(0, 0, 0.5);
-    geometries[Sides.Bottom] = plane
-      .clone()
-      .rotateX(-Math.PI)
-      .translate(0, 0, -0.5);
+    geometries[Sides.Front] = plane.clone().rotateX(+halfPi);
+    geometries[Sides.Back] = plane.clone().rotateX(-halfPi);
+    geometries[Sides.Left] = plane.clone().rotateY(-halfPi);
+    geometries[Sides.Right] = plane.clone().rotateY(+halfPi);
+    geometries[Sides.Top] = plane.clone();
+    geometries[Sides.Bottom] = plane.clone().rotateX(-Math.PI);
 
     let colors: THREE.Color[] = [];
     colors[Sides.Right] = new THREE.Color('red');
     colors[Sides.Left] = new THREE.Color('blue');
+    colors[Sides.Front] = new THREE.Color('yellow');
+    colors[Sides.Back] = new THREE.Color('purple');
     colors[Sides.Top] = new THREE.Color('green');
+    colors[Sides.Bottom] = new THREE.Color('gray');
 
     geometries.forEach((g, i) => {
       let sideMat = mat.clone();
       sideMat.color.setRGB(0, 0, 0);
       if (colors[i]) sideMat.color.copy(colors[i]);
-      this.cubeMesh.add(new THREE.Mesh(g, sideMat));
+      let mesh = new THREE.Mesh(g, sideMat);
+      mesh.userData.sides = i;
+      this.cubeMesh.add(mesh);
     });
   }
 
-  createCornerFacets() {}
-  createEdgeFacets() {}
+  createEdgeFacets() {
+    // it's math: the projection of the champer on the plane is champer / sqrt(2)
+    // (Pythagoras), reduce from both side and you get:
+    let width = this.params.champer;
+    let height = 1.0 - Math.sqrt(2) * this.params.champer;
+    let plane = new THREE.PlaneGeometry(width, height);
+    let mat = new THREE.MeshBasicMaterial({ color: 'pink' });
+    let piBy2 = Math.PI / 2;
+    let piBy4 = Math.PI / 4;
+    let geoms = [];
+    let offset: number = Math.sqrt(2) / 2 - this.params.champer / 2;
+    plane.translate(0, 0, offset);
+
+    // side edges
+    geoms[Sides.Front | Sides.Right] = plane
+      .clone()
+      .rotateX(piBy2)
+      .rotateZ(piBy4);
+    geoms[Sides.Right | Sides.Back] = geoms[Sides.Front | Sides.Right]
+      .clone()
+      .rotateZ(piBy2);
+    geoms[Sides.Back | Sides.Left] = geoms[Sides.Right | Sides.Back]
+      .clone()
+      .rotateZ(piBy2);
+    geoms[Sides.Left | Sides.Front] = geoms[Sides.Back | Sides.Left]
+      .clone()
+      .rotateZ(piBy2);
+
+    // top edges
+    geoms[Sides.Top | Sides.Right] = plane.clone().rotateY(piBy4);
+    geoms[Sides.Top | Sides.Back] = geoms[Sides.Top | Sides.Right]
+      .clone()
+      .rotateZ(piBy2);
+    geoms[Sides.Top | Sides.Left] = geoms[Sides.Top | Sides.Back]
+      .clone()
+      .rotateZ(piBy2);
+    geoms[Sides.Top | Sides.Front] = geoms[Sides.Top | Sides.Left]
+      .clone()
+      .rotateZ(piBy2);
+
+    // botom edges
+    geoms[Sides.Bottom | Sides.Right] = plane.clone().rotateY(piBy4 + piBy2);
+    geoms[Sides.Bottom | Sides.Back] = geoms[Sides.Bottom | Sides.Right]
+      .clone()
+      .rotateZ(piBy2);
+    geoms[Sides.Bottom | Sides.Left] = geoms[Sides.Bottom | Sides.Back]
+      .clone()
+      .rotateZ(piBy2);
+    geoms[Sides.Bottom | Sides.Front] = geoms[Sides.Bottom | Sides.Left]
+      .clone()
+      .rotateZ(piBy2);
+
+    geoms.forEach((g, i) => {
+      let sideMat = mat.clone();
+      sideMat.color.setRGB(0, 0, 0);
+      let mesh = new THREE.Mesh(g, sideMat);
+      mesh.userData.sise = i;
+      this.cubeMesh.add(mesh);
+    });
+  }
+
+  getClosesVertexOfPlaneMesh(mesh: THREE.Mesh, vec: Vector3): Vector3 {
+    let geom: THREE.PlaneGeometry = mesh.geometry as THREE.PlaneGeometry;
+    let closest: Vector3 = geom.vertices[0];
+    let bestDist = closest.distanceTo(vec);
+    for (let i = 1; i < geom.vertices.length; i++) {
+      let dist = geom.vertices[i].distanceTo(vec);
+      if (dist < bestDist) {
+        bestDist = dist;
+        closest = geom.vertices[i];
+      }
+    }
+    return closest;
+  }
+
+  getMeshOfSide(side: Sides): THREE.Mesh {
+    return this.cubeMesh.children.find(
+      (m) => m.userData.sides == side
+    ) as THREE.Mesh;
+  }
+
+  getTriangleOfSides(
+    a: Sides,
+    b: Sides,
+    c: Sides,
+    corner: Vector3
+  ): THREE.Triangle {
+    return new THREE.Triangle(
+      this.getClosesVertexOfPlaneMesh(this.getMeshOfSide(a), corner),
+      this.getClosesVertexOfPlaneMesh(this.getMeshOfSide(b), corner),
+      this.getClosesVertexOfPlaneMesh(this.getMeshOfSide(c), corner)
+    );
+  }
+
+  createCornerMesh(a: Sides, b: Sides, c: Sides, corner: Vector3): THREE.Mesh {
+    let geom = new THREE.Geometry();
+    let triangle = this.getTriangleOfSides(a, b, c, corner);
+    geom.vertices.push(triangle.a);
+    geom.vertices.push(triangle.b);
+    geom.vertices.push(triangle.c);
+    geom.faces.push(new THREE.Face3(0, 1, 2));
+    let mat = new THREE.MeshBasicMaterial({ color: 0x873487 });
+    let mesh = new THREE.Mesh(geom, mat);
+    mesh.userData.sides = a | b | c;
+    return mesh;
+  }
+
+  createCornerFacets() {
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Left,
+        Sides.Front,
+        Sides.Top,
+        new Vector3(-1, -1, 1)
+      )
+    );
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Front,
+        Sides.Right,
+        Sides.Top,
+        new Vector3(1, -1, 1)
+      )
+    );
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Right,
+        Sides.Back,
+        Sides.Top,
+        new Vector3(1, 1, 1)
+      )
+    );
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Back,
+        Sides.Left,
+        Sides.Top,
+        new Vector3(-1, 1, 1)
+      )
+    );
+
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Front,
+        Sides.Left,
+        Sides.Bottom,
+        new Vector3(-1, -1, -1)
+      )
+    );
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Right,
+        Sides.Front,
+        Sides.Bottom,
+        new Vector3(1, -1, -1)
+      )
+    );
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Back,
+        Sides.Right,
+        Sides.Bottom,
+        new Vector3(1, 1, -1)
+      )
+    );
+    this.cubeMesh.add(
+      this.createCornerMesh(
+        Sides.Left,
+        Sides.Back,
+        Sides.Bottom,
+        new Vector3(-1, 1, -1)
+      )
+    );
+  }
 
   render() {
-    // change this to event driven
-    this.renderer.render(this.scene, this.localCamera);
+    let userDirection: Vector3 = new Vector3();
+    let localDirection: Vector3 = new Vector3();
+    this.params.camera.getWorldDirection(userDirection);
+    this.localCamera.getWorldDirection(localDirection);
+    let changed = localDirection.dot(userDirection) < 0.9999;
+
+    if (changed) {
+      this.localCamera.position
+        .copy(userDirection)
+        .multiplyScalar(-this.radius);
+      this.localCamera.lookAt(0, 0, 0);
+      this.localCamera.updateMatrix();
+      this.renderer.render(this.scene, this.localCamera);
+    }
 
     setTimeout(() => {
       requestAnimationFrame(() => this.render());
     }, 1000 / 60);
   }
+
   createCamera() {
     let ratio = this.params.div.clientWidth / this.params.div.clientHeight;
     this.localCamera = new THREE.PerspectiveCamera(45, ratio, 0.01, 5);
-    this.localCamera.position.copy(
-      this.params.homePosition.clone().multiplyScalar(-Math.sqrt(2))
-    );
-    this.localCamera.lookAt(new Vector3(0, 0, 0));
-
-    // let rotationMat = new THREE.Matrix4();
-    // this.params.camera.modelViewMatrix.extractRotation(rotationMat);
-    // let quaternion = new THREE.Quaternion().setFromRotationMatrix(rotationMat);
-    // let position = new THREE.Vector3(2, 0, 0);
-    // let scale = new THREE.Vector3(1, 1, 1);
-    // this.localCamera.modelViewMatrix.compose(position, quaternion, scale);
+    this.localCamera.up = this.params.camera.up.clone();
   }
 }
 
