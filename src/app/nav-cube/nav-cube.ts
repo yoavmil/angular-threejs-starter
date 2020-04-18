@@ -9,6 +9,8 @@ class NavCubeParams {
   // showHome: boolean = false; TODO
   // highLight: boolean = false; TODO
   champer: number = 0.1; // precentage
+  cubeBaseColorStyle: string = 'white'; // TODO change to number
+  labelColorStyle: string = 'black'; // TODO change to number
 }
 
 enum Sides {
@@ -42,7 +44,14 @@ class NavCube {
 
     if (!this.params.div) throw new Error('No div passed by user');
     if (this.params.div.clientWidth == 0 || this.params.div.clientHeight == 0)
-      throw new Error('div client width/height == 0');
+      throw new Error('div client width or height == 0');
+    if (
+      !this.params.cubeBaseColorStyle ||
+      this.params.cubeBaseColorStyle.length == 0
+    )
+      this.params.cubeBaseColorStyle = 'white';
+    if (!this.params.labelColorStyle || this.params.labelColorStyle.length == 0)
+      this.params.labelColorStyle = 'black';
   }
 
   createRenderer() {
@@ -61,6 +70,7 @@ class NavCube {
     this.createMainFacets();
     this.createEdgeFacets();
     this.createCornerFacets();
+    this.createLabels();
 
     this.scene = new THREE.Scene();
     this.scene.add(this.cubeMesh);
@@ -71,30 +81,18 @@ class NavCube {
     // (Pythagoras), reduce from both side and you get:
     let width = 1.0 - Math.sqrt(2) * this.params.champer;
     let plane = new THREE.PlaneGeometry(width, width).translate(0, 0, 0.5);
-    let mat = new THREE.MeshBasicMaterial({});
     let halfPi = Math.PI / 2;
-    let geometries = [];
+    let geoms = [];
 
-    geometries[Sides.Front] = plane.clone().rotateX(+halfPi);
-    geometries[Sides.Back] = plane.clone().rotateX(-halfPi);
-    geometries[Sides.Left] = plane.clone().rotateY(-halfPi);
-    geometries[Sides.Right] = plane.clone().rotateY(+halfPi);
-    geometries[Sides.Top] = plane.clone();
-    geometries[Sides.Bottom] = plane.clone().rotateX(-Math.PI);
+    geoms[Sides.Front] = plane.clone().rotateX(halfPi);
+    geoms[Sides.Back] = plane.clone().rotateX(-halfPi).rotateY(Math.PI);
+    geoms[Sides.Left] = plane.clone().rotateY(-halfPi).rotateX(halfPi);
+    geoms[Sides.Right] = plane.clone().rotateY(halfPi).rotateX(halfPi);
+    geoms[Sides.Top] = plane.clone();
+    geoms[Sides.Bottom] = plane.clone().rotateX(-Math.PI);
 
-    let colors: THREE.Color[] = [];
-    colors[Sides.Right] = new THREE.Color('red');
-    colors[Sides.Left] = new THREE.Color('blue');
-    colors[Sides.Front] = new THREE.Color('yellow');
-    colors[Sides.Back] = new THREE.Color('purple');
-    colors[Sides.Top] = new THREE.Color('green');
-    colors[Sides.Bottom] = new THREE.Color('gray');
-
-    geometries.forEach((g, i) => {
-      let sideMat = mat.clone();
-      sideMat.color.setRGB(0, 0, 0);
-      if (colors[i]) sideMat.color.copy(colors[i]);
-      let mesh = new THREE.Mesh(g, sideMat);
+    geoms.forEach((geom, i) => {
+      let mesh = new THREE.Mesh(geom, new THREE.MeshBasicMaterial());
       mesh.userData.sides = i;
       this.cubeMesh.add(mesh);
     });
@@ -106,7 +104,9 @@ class NavCube {
     let width = this.params.champer;
     let height = 1.0 - Math.sqrt(2) * this.params.champer;
     let plane = new THREE.PlaneGeometry(width, height);
-    let mat = new THREE.MeshBasicMaterial({ color: 'pink' });
+    let mat = new THREE.MeshBasicMaterial({
+      color: this.params.cubeBaseColorStyle,
+    });
     let piBy2 = Math.PI / 2;
     let piBy4 = Math.PI / 4;
     let geoms = [];
@@ -152,12 +152,23 @@ class NavCube {
       .clone()
       .rotateZ(piBy2);
 
-    geoms.forEach((g, i) => {
+    geoms.forEach((geom, i) => {
       let sideMat = mat.clone();
-      sideMat.color.setRGB(0, 0, 0);
-      let mesh = new THREE.Mesh(g, sideMat);
+      let mesh = new THREE.Mesh(geom, sideMat);
       mesh.userData.sise = i;
       this.cubeMesh.add(mesh);
+
+      // create wireframe
+      let border = new THREE.Geometry();
+      border.vertices.push(geom.vertices[0]);
+      border.vertices.push(geom.vertices[1]);
+      border.vertices.push(geom.vertices[3]);
+      border.vertices.push(geom.vertices[2]);
+      border.vertices.push(geom.vertices[0]);
+
+      const lineMat = new THREE.LineBasicMaterial({ color: 'black' }); // TODO make param
+      var line = new THREE.Line(border, lineMat);
+      this.cubeMesh.add(line);
     });
   }
 
@@ -201,7 +212,9 @@ class NavCube {
     geom.vertices.push(triangle.b);
     geom.vertices.push(triangle.c);
     geom.faces.push(new THREE.Face3(0, 1, 2));
-    let mat = new THREE.MeshBasicMaterial({ color: 0x873487 });
+    let mat = new THREE.MeshBasicMaterial({
+      color: this.params.cubeBaseColorStyle,
+    });
     let mesh = new THREE.Mesh(geom, mat);
     mesh.userData.sides = a | b | c;
     return mesh;
@@ -300,6 +313,55 @@ class NavCube {
     let ratio = this.params.div.clientWidth / this.params.div.clientHeight;
     this.localCamera = new THREE.PerspectiveCamera(45, ratio, 0.01, 5);
     this.localCamera.up = this.params.camera.up.clone();
+  }
+
+  createLabels() {
+    let sides = [
+      Sides.Front,
+      Sides.Back,
+      Sides.Left,
+      Sides.Right,
+      Sides.Top,
+      Sides.Bottom,
+    ];
+    let canvasSize = 300;
+    let fontSize: number = 72;
+
+    {
+      // find common font size
+      let longestString = Sides[Sides.Bottom];
+      let canvas = document.createElement('canvas');
+      canvas.width = canvasSize;
+      canvas.height = canvasSize;
+      let ctx = canvas.getContext('2d');
+
+      ctx.font = `bold ${fontSize}px Arial`;
+      let pixels = ctx.measureText(longestString);
+      let ratio = canvasSize / pixels.width;
+      fontSize = Math.round(fontSize * ratio * 0.9); // 90% for padding
+    }
+
+    for (let i in sides) {
+      let side = sides[i];
+      let str = Sides[side];
+
+      let canvas = document.createElement('canvas');
+      canvas.width = canvasSize;
+      canvas.height = canvasSize;
+      let ctx = canvas.getContext('2d');
+      ctx.fillStyle = this.params.cubeBaseColorStyle;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = `bold ${fontSize}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = this.params.labelColorStyle;
+      ctx.fillText(str, canvas.width / 2, canvas.height / 2);
+
+      let mesh = this.getMeshOfSide(side);
+      let mat = mesh.material as THREE.MeshBasicMaterial;
+      mat.map = new THREE.CanvasTexture(canvas);
+    }
   }
 }
 

@@ -12,5 +12,8 @@
     "threejs"
   ],
   "author": "yoavmil@gmail.com",
-  "license": "LGPL-3.0-or-later"
+  "license": "LGPL-3.0-or-later",
+  "dependencies": {
+    "three": "^0.115.0"
+  }
 }
