@@ -4,13 +4,13 @@ import { Vector3 } from 'three';
 class NavCubeParams {
   camera: THREE.Camera;
   div: HTMLDivElement;
-  homePosition: Vector3 = new Vector3(-1, -1, 1);
   // tween: boolean = false; TODO
   // showHome: boolean = false; TODO
   // highLight: boolean = false; TODO
-  champer: number = 0.1; // precentage
-  cubeBaseColorStyle: string = 'white'; // TODO change to number
-  labelColorStyle: string = 'black'; // TODO change to number
+  champer: number = 0.15; // precentage
+  faceColor: number = 0xd6d7dc;
+  edgeColor: number = 0xb1c5d4;
+  vertexColor: number = 0x71879a;
 }
 
 enum Sides {
@@ -36,6 +36,8 @@ class NavCube {
     this.createRenderer();
     this.createScene();
     this.createCamera();
+    this.registerMouseEvent();
+
     this.render();
   }
 
@@ -45,13 +47,6 @@ class NavCube {
     if (!this.params.div) throw new Error('No div passed by user');
     if (this.params.div.clientWidth == 0 || this.params.div.clientHeight == 0)
       throw new Error('div client width or height == 0');
-    if (
-      !this.params.cubeBaseColorStyle ||
-      this.params.cubeBaseColorStyle.length == 0
-    )
-      this.params.cubeBaseColorStyle = 'white';
-    if (!this.params.labelColorStyle || this.params.labelColorStyle.length == 0)
-      this.params.labelColorStyle = 'black';
   }
 
   createRenderer() {
@@ -105,7 +100,7 @@ class NavCube {
     let height = 1.0 - Math.sqrt(2) * this.params.champer;
     let plane = new THREE.PlaneGeometry(width, height);
     let mat = new THREE.MeshBasicMaterial({
-      color: this.params.cubeBaseColorStyle,
+      color: this.params.edgeColor,
     });
     let piBy2 = Math.PI / 2;
     let piBy4 = Math.PI / 4;
@@ -155,7 +150,7 @@ class NavCube {
     geoms.forEach((geom, i) => {
       let sideMat = mat.clone();
       let mesh = new THREE.Mesh(geom, sideMat);
-      mesh.userData.sise = i;
+      mesh.userData.sides = i;
       this.cubeMesh.add(mesh);
 
       // create wireframe
@@ -168,7 +163,7 @@ class NavCube {
 
       const lineMat = new THREE.LineBasicMaterial({ color: 'black' }); // TODO make param
       var line = new THREE.Line(border, lineMat);
-      this.cubeMesh.add(line);
+      mesh.add(line); // the hierarchy is important for ray casting
     });
   }
 
@@ -213,7 +208,7 @@ class NavCube {
     geom.vertices.push(triangle.c);
     geom.faces.push(new THREE.Face3(0, 1, 2));
     let mat = new THREE.MeshBasicMaterial({
-      color: this.params.cubeBaseColorStyle,
+      color: this.params.vertexColor,
     });
     let mesh = new THREE.Mesh(geom, mat);
     mesh.userData.sides = a | b | c;
@@ -349,19 +344,40 @@ class NavCube {
       canvas.width = canvasSize;
       canvas.height = canvasSize;
       let ctx = canvas.getContext('2d');
-      ctx.fillStyle = this.params.cubeBaseColorStyle;
+      ctx.fillStyle = `#${this.params.faceColor.toString(16)}`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.font = `bold ${fontSize}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = this.params.labelColorStyle;
+      ctx.fillStyle = 'black';
       ctx.fillText(str, canvas.width / 2, canvas.height / 2);
 
       let mesh = this.getMeshOfSide(side);
       let mat = mesh.material as THREE.MeshBasicMaterial;
       mat.map = new THREE.CanvasTexture(canvas);
     }
+  }
+
+  registerMouseEvent() {
+    this.params.div.onclick = (event: MouseEvent) => {
+      if (this.cubeMesh) {
+        let xy = {
+          x: +(event.offsetX / this.params.div.clientWidth) * 2 - 1,
+          y: -(event.offsetY / this.params.div.clientHeight) * 2 + 1,
+        };
+        let ray = new THREE.Raycaster();
+        ray.setFromCamera(xy, this.localCamera);
+
+        let intersects = ray.intersectObjects(this.cubeMesh.children, false);
+        intersects.forEach((intersection, i) => {
+          if (intersection.object.userData.sides) {
+            console.log(intersection.object.userData.sides);
+            return;
+          }
+        });
+      }
+    };
   }
 }
 

@@ -42,12 +42,9 @@ export class ViewerComponent implements AfterViewInit {
   }
 
   initNavCube() {
-    let navCubeParams: NavCubeParams = {
-      camera: this.camera,
-      div: this.navCubeDivRef.nativeElement,
-      champer: 0.15,
-      homePosition: new THREE.Vector3(-1, -1, 1),
-    };
+    let navCubeParams: NavCubeParams = new NavCubeParams();
+    navCubeParams.camera = this.camera;
+    navCubeParams.div = this.navCubeDivRef.nativeElement;
     new NavCube(navCubeParams);
   }
 
