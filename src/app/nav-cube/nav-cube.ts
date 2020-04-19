@@ -28,7 +28,7 @@ class NavCube {
   localCamera: THREE.PerspectiveCamera;
   cubeMesh: THREE.Mesh;
   scene: THREE.Scene;
-  radius: number = 2 * Math.sqrt(2);
+  radius: number = 2;
 
   constructor(params: NavCubeParams) {
     this.params = params;
