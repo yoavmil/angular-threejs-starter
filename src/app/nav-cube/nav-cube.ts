@@ -284,18 +284,15 @@ class NavCube {
   }
 
   render() {
-    let userDirection: Vector3 = new Vector3();
-    let localDirection: Vector3 = new Vector3();
-    this.params.camera.getWorldDirection(userDirection);
-    this.localCamera.getWorldDirection(localDirection);
-    let changed = localDirection.dot(userDirection) < 0.9999;
+    let userQuat = this.params.camera.quaternion;
+    let localQuat = this.localCamera.quaternion;
+    let changed = !userQuat.equals(localQuat);
 
     if (changed) {
-      this.localCamera.position
-        .copy(userDirection)
-        .multiplyScalar(-this.radius);
-      this.localCamera.lookAt(0, 0, 0);
-      this.localCamera.updateMatrix();
+      let vec = this.localCamera.up.clone().multiplyScalar(this.radius);
+      vec.applyQuaternion(userQuat);
+      this.localCamera.position.copy(vec);
+      this.localCamera.setRotationFromQuaternion(userQuat);
       this.renderer.render(this.scene, this.localCamera);
     }
 

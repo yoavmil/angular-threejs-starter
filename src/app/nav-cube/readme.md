@@ -33,7 +33,7 @@ The cube is constructed of
 * corner faces (front-left-top ...)
 
 ### TODO
-* call back to rotate user camera
+* callback to rotate user camera
 * capture or release mouse events, depends on click position
-* when rotating camera from above, NavCube isn't updated
-* different facets colors, per angle and light
+  * this is not easy
+* add lights
