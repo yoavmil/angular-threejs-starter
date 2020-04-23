@@ -19,9 +19,6 @@ A helper 3D navigation cube to work with `ThreeJS` camera.
 - Create a new canvas and render there. This is the only way to add rendering stuff w/o having the user add code to his render method.
 
 
-
-
-
 ### Dev
 
 <img src="./images/navcube.PNG" alt="image" style="zoom:33%;" />
@@ -33,7 +30,11 @@ The cube is constructed of
 * corner faces (front-left-top ...)
 
 ### TODO
-* callback to rotate user camera
+* tween
+* optional callback to fit camera to screen
 * capture or release mouse events, depends on click position
   * this is not easy
-* add lights
+* add lights, ambient + directional light should be upper right of the camera, directed to [0,0,0].
+  * phong material
+  * question is about canavs material
+* highlight on hover by displaying the border of that face, hiding the rest of the borders.

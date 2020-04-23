@@ -210,6 +210,7 @@ class NavCube {
     let mat = new THREE.MeshBasicMaterial({
       color: this.params.vertexColor,
     });
+    geom.computeFaceNormals();
     let mesh = new THREE.Mesh(geom, mat);
     mesh.userData.sides = a | b | c;
     return mesh;
@@ -316,7 +317,7 @@ class NavCube {
       Sides.Top,
       Sides.Bottom,
     ];
-    let canvasSize = 300;
+    let canvasSize = 256; // textures need 2^N, N=7
     let fontSize: number = 72;
 
     {
@@ -358,23 +359,39 @@ class NavCube {
 
   registerMouseEvent() {
     this.params.div.onclick = (event: MouseEvent) => {
-      if (this.cubeMesh) {
-        let xy = {
-          x: +(event.offsetX / this.params.div.clientWidth) * 2 - 1,
-          y: -(event.offsetY / this.params.div.clientHeight) * 2 + 1,
-        };
-        let ray = new THREE.Raycaster();
-        ray.setFromCamera(xy, this.localCamera);
-
-        let intersects = ray.intersectObjects(this.cubeMesh.children, false);
-        intersects.forEach((intersection, i) => {
-          if (intersection.object.userData.sides) {
-            console.log(intersection.object.userData.sides);
-            return;
-          }
-        });
-      }
+      this.onClick(event);
     };
+  }
+
+  private onClick(event: MouseEvent) {
+    if (this.cubeMesh) {
+      let xy = {
+        x: +(event.offsetX / this.params.div.clientWidth) * 2 - 1,
+        y: -(event.offsetY / this.params.div.clientHeight) * 2 + 1,
+      };
+      let ray = new THREE.Raycaster();
+      ray.setFromCamera(xy, this.localCamera);
+      let intersects = ray.intersectObjects(this.cubeMesh.children, false);
+      intersects.forEach((intersection, i) => {
+        if (intersection.object.userData.sides) {
+          this.onSideCliked(
+            intersection.object as THREE.Mesh,
+            intersection.face.normal
+          );
+          return;
+        }
+      });
+    }
+  }
+
+  private onSideCliked(mesh: THREE.Mesh, normal: Vector3) {
+    let camLen = this.params.camera.position.length();
+    if (normal.equals(this.params.camera.up)) {
+      normal.applyAxisAngle(new Vector3(1, 0, 0), 0.001);
+    }
+
+    this.params.camera.position.copy(normal).multiplyScalar(camLen);
+    this.params.camera.lookAt(0, 0, 0);
   }
 }
 
