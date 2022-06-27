@@ -112,7 +112,6 @@
       }
     }
   },
-  "defaultProject": "SaturnBlaze",
   "cli": {
     "analytics": false
   }
